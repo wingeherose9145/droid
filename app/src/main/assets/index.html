@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <style>
+        body { 
+            margin: 0; 
+            background: black; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; 
+            color: white; 
+        }
+        #video-container { 
+            flex: 1; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            overflow: hidden;
+        }
+        /* object-fit: contain 是核心，自动适应横屏和竖屏视频比例，不拉伸 */
+        video { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: contain; 
+        }
+        #controls { 
+            padding: 20px; 
+            text-align: center; 
+            background: #111; 
+        }
+        input[type="file"] { 
+            display: none; 
+        }
+        .btn { 
+            padding: 12px 30px; 
+            background: #4CAF50; 
+            color: white; 
+            border-radius: 8px; 
+            font-size: 16px; 
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div id="video-container">
+        <video id="player" controls></video>
+    </div>
+    <div id="controls">
+        <label for="file-input" class="btn">选择本地视频</label>
+        <input type="file" id="file-input" accept="video/*">
+    </div>
+
+    <script>
+        document.getElementById('file-input').addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            if(file) {
+                var videoNode = document.getElementById('player');
+                // 创建本地文件的临时访问链接并播放
+                videoNode.src = URL.createObjectURL(file);
+                videoNode.play();
+            }
+        });
+    </script>
+</body>
+</html>
