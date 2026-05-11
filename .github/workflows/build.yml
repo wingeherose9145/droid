@@ -3,7 +3,7 @@ name: Build Android APK
 on:
   push:
     branches: [ "main" ]
-  workflow_dispatch: # 允许你手动点击按钮触发打包
+  workflow_dispatch:
 
 jobs:
   build:
@@ -18,6 +18,12 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
+
+    # 新增这一步：锁定兼容的 Gradle 8.4 版本
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
+      with:
+        gradle-version: '8.4'
 
     - name: Build with Gradle
       run: gradle assembleDebug
