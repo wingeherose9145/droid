@@ -4,14 +4,10 @@ import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.util.Log;
 import android.webkit.JavascriptInterface;
-import android.webkit.ValueCallback;
-import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -29,23 +25,22 @@ public class MainActivity extends Activity {
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setAllowFileAccess(true);
-        // 允许 WebView 访问应用内部存储的文件
         settings.setAllowFileAccessFromFileURLs(true);
         settings.setAllowUniversalAccessFromFileURLs(true);
+        settings.setMediaPlaybackRequiresUserGesture(false);
 
-        // 注入 JavaScript 接口，方便网页调用安卓原生功能
         webView.addJavascriptInterface(new WebAppInterface(), "AndroidInterface");
-
         webView.setWebViewClient(new WebViewClient());
         webView.loadUrl("file:///android_asset/index.html");
     }
 
-    // JavaScript 接口：当用户点击网页里的“+”号时触发
     public class WebAppInterface {
         @JavascriptInterface
         public void openFilePicker() {
             Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
             intent.setType("video/*");
+            // 允许选择多个文件（视安卓版本支持情况）
+            intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true); 
             startActivityForResult(intent, 1001);
         }
     }
@@ -53,37 +48,37 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == 1001 && resultCode == RESULT_OK && data != null) {
-            Uri sourceUri = data.getData();
-            // 在后台执行私有化拷贝过程
-            String privatePath = copyToInternalStorage(sourceUri);
-            if (privatePath != null) {
-                // 将私有文件路径传回网页播放
-                webView.post(() -> webView.loadUrl("javascript:playPrivateVideo('file://" + privatePath + "')"));
+            // 处理单选
+            if (data.getData() != null) {
+                processAndAdd(data.getData());
+            } 
+            // 处理多选 (部分文件管理器支持)
+            else if (data.getClipData() != null) {
+                for (int i = 0; i < data.getClipData().getItemCount(); i++) {
+                    processAndAdd(data.getClipData().getItemAt(i).getUri());
+                }
             }
+        }
+    }
+
+    private void processAndAdd(Uri uri) {
+        String privatePath = copyToInternalStorage(uri);
+        if (privatePath != null) {
+            webView.post(() -> webView.loadUrl("javascript:addVideoToList('file://" + privatePath + "')"));
         }
     }
 
     private String copyToInternalStorage(Uri uri) {
         try {
-            // 获取文件名
-            String fileName = "private_video_" + System.currentTimeMillis() + ".mp4";
-            // 定位到 App 私有目录：/data/user/0/com.example.webviewplayer/files/
+            String fileName = "vid_" + System.currentTimeMillis() + "_" + uri.getLastPathSegment().replaceAll("[^a-zA-Z0-9]", "") + ".mp4";
             File destFile = new File(getFilesDir(), fileName);
-
             InputStream in = getContentResolver().openInputStream(uri);
             OutputStream out = new FileOutputStream(destFile);
-            byte[] buf = new byte[1024 * 8];
+            byte[] buf = new byte[1024 * 1024]; // 1MB 缓冲区提高拷贝速度
             int len;
-            while ((len = in.read(buf)) > 0) {
-                out.write(buf, 0, len);
-            }
-            out.close();
-            in.close();
-            
+            while ((len = in.read(buf)) > 0) { out.write(buf, 0, len); }
+            out.close(); in.close();
             return destFile.getAbsolutePath();
-        } catch (Exception e) {
-            Log.e("Error", "Copy failed", e);
-            return null;
-        }
+        } catch (Exception e) { return null; }
     }
 }
