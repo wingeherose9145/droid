@@ -4,64 +4,49 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <style>
-        body { 
-            margin: 0; 
-            background: black; 
-            display: flex; 
-            flex-direction: column; 
-            height: 100vh; 
-            color: white; 
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; display: flex; justify-content: center; align-items: center; }
+        #video-wrapper { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        video { max-width: 100%; max-height: 100%; object-fit: contain; background: black; }
+        /* 透明加号按钮 */
+        #floating-btn {
+            position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px;
+            background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%; display: flex; justify-content: center; align-items: center;
+            z-index: 100;
         }
-        #video-container { 
-            flex: 1; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            overflow: hidden;
-        }
-        /* object-fit: contain 是核心，自动适应横屏和竖屏视频比例，不拉伸 */
-        video { 
-            width: 100%; 
-            height: 100%; 
-            object-fit: contain; 
-        }
-        #controls { 
-            padding: 20px; 
-            text-align: center; 
-            background: #111; 
-        }
-        input[type="file"] { 
-            display: none; 
-        }
-        .btn { 
-            padding: 12px 30px; 
-            background: #4CAF50; 
-            color: white; 
-            border-radius: 8px; 
-            font-size: 16px; 
-            font-weight: bold;
-        }
+        #floating-btn::before { content: ''; position: absolute; width: 2px; height: 24px; background: rgba(255,255,255,0.5); }
+        #floating-btn::after { content: ''; position: absolute; width: 24px; height: 2px; background: rgba(255,255,255,0.5); }
+        #status-text { position: fixed; top: 10px; color: rgba(255,255,255,0.3); font-size: 12px; pointer-events: none; }
     </style>
 </head>
 <body>
-    <div id="video-container">
-        <video id="player" controls></video>
+    <div id="status-text">待添加私有视频</div>
+    <div id="video-wrapper">
+        <video id="player" controls playsinline></video>
     </div>
-    <div id="controls">
-        <label for="file-input" class="btn">选择本地视频</label>
-        <input type="file" id="file-input" accept="video/*">
-    </div>
+    
+    <div id="floating-btn" onclick="addVideo()"></div>
 
     <script>
-        document.getElementById('file-input').addEventListener('change', function(e) {
-            var file = e.target.files[0];
-            if(file) {
-                var videoNode = document.getElementById('player');
-                // 创建本地文件的临时访问链接并播放
-                videoNode.src = URL.createObjectURL(file);
-                videoNode.play();
+        const player = document.getElementById('player');
+        const status = document.getElementById('status-text');
+
+        function addVideo() {
+            // 调用 Java 代码中的接口
+            if (window.AndroidInterface) {
+                status.innerText = "正在私有化导入...";
+                window.AndroidInterface.openFilePicker();
             }
-        });
+        }
+
+        // 这个函数会被 Java 代码自动回调
+        function playPrivateVideo(fileUrl) {
+            status.innerText = "私有文件已就绪";
+            player.src = fileUrl;
+            player.play();
+            // 5秒后隐藏状态文字
+            setTimeout(() => { status.innerText = ""; }, 5000);
+        }
     </script>
 </body>
 </html>
